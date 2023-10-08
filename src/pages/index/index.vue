@@ -1,4 +1,5 @@
 <template>
+  <!-- Vue 3 模板部分 -->
   <view class="page">
     <view>
       <camera
@@ -24,6 +25,8 @@
 </template>
 
 <script setup>
+// 使用 Vue 3 的 script setup 语法来组织代码
+
 import { ref, onMounted, onUnmounted } from "vue";
 import { loadModel, detect } from "@/utils/faceBusiness";
 import {
@@ -35,15 +38,15 @@ import {
 
 import * as tf_face from "@tensorflow-models/face-landmarks-detection";
 
-const devicePosition = ref("front");
-const frameSize = ref({ width: 640, height: 480 });
-let listener = null;
+const devicePosition = ref("front"); // 设备相机方向，默认为前置摄像头
+const frameSize = ref({ width: 640, height: 480 }); // 帧的尺寸
+let listener = null; // 相机监听器
 
-const modelUrl = "https://m.sanyue.red/demo/gltf/sunglass.glb";
-// const modelUrl = 'cloud://makeup-8gv7cr62279c77b1.6d61-makeup-8gv7cr62279c77b1-1321468729/model/facemesh/model.json'
-const cameraFrameMax = 3;
-const context = uni.createCameraContext();
+const modelUrl = "https://m.sanyue.red/demo/gltf/sunglass.glb"; // 3D 模型的 URL
+const cameraFrameMax = 3; // 相机帧的最大数量
+const context = uni.createCameraContext(); // 创建相机上下文对象
 
+// 启动人脸追踪
 const startTracking = async () => {
   let count = 0;
   listener = context.onCameraFrame(async res => {
@@ -59,13 +62,28 @@ const startTracking = async () => {
       height: res.height
     };
 
+    // const model = await tf_face.load(
+    //   tf_face.SupportedPackages.mediapipeFacemesh,
+    //   {
+    //     shouldLoadIrisModel: true
+    //   }
+    // );
+    // const predictions = await model.estimateFaces({
+    //   input: frame // 您的图像帧或视频帧
+    // });
+
+    // // 检测到的嘴唇关键点
+    // const lipKeyPoints = predictions[0].annotations.lipsUpperInner.concat(
+    //   predictions[0].annotations.lipsLowerInner
+    // );
+    
+    // 使用 TensorFlow.js 进行人脸检测
     const result = await detect(frame);
 
     if (result && result.prediction) {
       const canvasWidth = frame.width;
       const canvasHeight = frame.height;
-      // console.log(result.prediction, canvasWidth, canvasHeight)
-      setModel(result.prediction, canvasWidth, canvasHeight);
+      setModel(result.prediction, canvasWidth, canvasHeight); // 更新 3D 模型的位置、旋转和缩放
     } else {
       const message = "No results.";
       uni.showToast({
@@ -78,50 +96,37 @@ const startTracking = async () => {
   listener.start();
 };
 
+// 停止人脸追踪
 const stopTracking = () => {
   if (listener) {
     listener.stop();
   }
 };
 
+// 切换相机方向
 const changeDirection = () => {
   devicePosition.value = devicePosition.value === "back" ? "front" : "back";
 };
 
+// 当组件被挂载时执行的操作
 onMounted(async () => {
-  // const model = await tf_face.load(
-  //   tf_face.SupportedPackages.mediapipeFacemesh,
-  //   {
-  //     //detectorModelUrl:'https://tfhub.dev/mediapipe/tfjs-model/facemesh/1/default/1',
-  //     detectorModelUrl:
-  //       "https://6d61-makeup-8gv7cr62279c77b1-1321468729.tcb.qcloud.la/model/facemesh/model.json?sign=a44b997deb096395da1b70c09650d685&t=1696751655",
-  //     //irisModelUrl:'https://tfhub.dev/mediapipe/tfjs-model/iris/1/default/2',
-  //     irisModelUrl:
-  //       "https://6d61-makeup-8gv7cr62279c77b1-1321468729.tcb.qcloud.la/model/iris/model.json?sign=38f8db2df09c4d6d381068ed4767556e&t=1696751497",
-  //     //modelUrl:'https://tfhub.dev/tensorflow/tfjs-model/blazeface/1/default/1'
-  //     modelUrl:
-  //       "https://6d61-makeup-8gv7cr62279c77b1-1321468729.tcb.qcloud.la/model/blazeface/model.json?sign=69a64281c4efc23d504c3d8fd2f5860b&t=1696751631"
-  //   }
-  // );
-  // console.log("===============", model);
-  // model.estimateFaces({
-  //   input: context//document.querySelector("video")
-  // })
   loadModel().then(() => {
     uni.hideLoading();
-    initThree("canvasWebGL", modelUrl);
-    startTracking();
+    initThree("canvasWebGL", modelUrl); // 初始化 Three.js 场景
+    startTracking(); // 启动人脸追踪
   });
 });
 
+// 当组件被卸载时执行的操作
 onUnmounted(() => {
-  stopTracking();
-  stopAnimate();
-  dispose();
+  stopTracking(); // 停止人脸追踪
+  stopAnimate(); // 停止动画
+  dispose(); // 释放资源
 });
 </script>
 
 <style>
+/* 样式部分，定义了页面的布局和相机的样式 */
 .page__bd {
   padding-bottom: 0;
 }

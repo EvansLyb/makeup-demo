@@ -1,18 +1,23 @@
+// 引入必要的模块和函数
 import { createScopedThreejs } from 'threejs-miniprogram';
 import { registerGLTFLoader } from './GLTFLoader.js';
 
-// the scale of the 3d model
+// 初始化缩放因子
 const initScale = 0.19;
-// index of the track points of the face
+
+// 定义用于跟踪面部关键点的索引
 const trackPointA = 168;
 const trackPointB = 122;
 const trackPointC = 351;
+
+// 声明全局变量
 var camera, scene, renderer;
 var canvas;
 var THREE;
 var mainModel, requestId;
 var canvasWidth, canvasHeight;
 
+// 初始化Three.js场景
 function initThree(canvasId, modelUrl) {
     wx.createSelectorQuery()
         .select('#' + canvasId)
@@ -26,19 +31,20 @@ function initThree(canvasId, modelUrl) {
         });
 }
 
+// 初始化Three.js场景中的相机、光照和渲染器
 function initScene() {
     camera = new THREE.OrthographicCamera(1, 1, 1, 1, -1000, 1000);
-    // set the camera
+    // 设置相机属性
     setSize();
     scene = new THREE.Scene();
-    // ambient light
+    // 添加环境光
     scene.add(new THREE.AmbientLight(0xffffff));
-    // direction light
+    // 添加定向光源
     var directionallight = new THREE.DirectionalLight(0xffffff, 1);
     directionallight.position.set(0, 0, 1000);
     scene.add(directionallight);
 
-    // init render
+    // 初始化渲染器
     renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: true,
@@ -48,9 +54,11 @@ function initScene() {
     renderer.setPixelRatio(devicePixelRatio);
     renderer.setSize(canvas.width, canvas.height);
 
+    // 启动动画循环
     animate();
 }
 
+// 加载3D模型
 function loadModel(modelUrl) {
     registerGLTFLoader(THREE);
     var loader = new THREE.GLTFLoader();
@@ -62,7 +70,7 @@ function loadModel(modelUrl) {
             console.log('loadModel', 'success');
             var model = gltf.scene;
             model.scale.setScalar(initScale);
-            // save model
+            // 保存模型
             mainModel = model;
             scene.add(model);
             wx.hideLoading();
@@ -79,9 +87,10 @@ function loadModel(modelUrl) {
         });
 }
 
+// 更新3D模型
 function updateModel(modelUrl) {
     var loader = new THREE.GLTFLoader();
-    // loading
+    // 加载模型
     wx.showLoading({
         title: 'Loading 3D...',
     });
@@ -90,11 +99,11 @@ function updateModel(modelUrl) {
             console.log('updateModel', 'success');
             var model = gltf.scene;
             model.scale.setScalar(initScale);
-            // remove old model
+            // 移除旧模型
             scene.remove(mainModel);
-            // save new model
+            // 保存新模型
             mainModel = model;
-            // add new model
+            // 添加新模型
             scene.add(model);
             wx.hideLoading();
         },
@@ -112,6 +121,7 @@ function updateModel(modelUrl) {
     wx.hideLoading();
 }
 
+// 设置相机的视口大小
 function setSize() {
     if (!camera) {
         return;
@@ -125,12 +135,10 @@ function setSize() {
     camera.updateProjectionMatrix();
 }
 
-function setModel(prediction,
-    _canvasWidth,
-    _canvasHeight) {
-
+// 设置3D模型的位置、旋转和缩放
+function setModel(prediction, _canvasWidth, _canvasHeight) {
     if (!mainModel) {
-        // console.log('setModel', '3d model is not loaded.');
+        // 如果模型未加载，不执行任何操作
         return;
     }
 
@@ -140,22 +148,16 @@ function setModel(prediction,
         setSize();
     }
 
-    const result = calcTriangle(prediction,
-        trackPointA,
-        trackPointB,
-        trackPointC);
-    // console.log('calcTriangle', result);
+    // 计算模型的位置、旋转和缩放信息
+    const result = calcTriangle(prediction, trackPointA, trackPointB, trackPointC);
 
-
-    // rotation
-    mainModel.rotation.setFromRotationMatrix(
-        result.rotation);
-    // position
+    // 应用计算结果到模型
+    mainModel.rotation.setFromRotationMatrix(result.rotation);
     mainModel.position.copy(result.position);
-    // scal
     mainModel.scale.setScalar(initScale * result.scale);
 }
 
+// 获取特定关键点的位置
 function getPosition(prediction, id) {
     var p = prediction.scaledMesh[id];
     var x = p[0] - 0.5 * canvasWidth;
@@ -164,6 +166,7 @@ function getPosition(prediction, id) {
     return new THREE.Vector3(x, y, z);
 }
 
+// 计算缩放比例
 function getScale(prediction, id1, id2) {
     var p1 = prediction.mesh[id1];
     var p1_scaled = prediction.scaledMesh[id1];
@@ -175,18 +178,19 @@ function getScale(prediction, id1, id2) {
     return b / a;
 }
 
+// 计算三角形的位置、旋转和缩放
 function calcTriangle(prediction, id0, id1, id2) {
     var p0 = getPosition(prediction, id0);
     var p1 = getPosition(prediction, id1);
     var p2 = getPosition(prediction, id2);
 
-    // position
+    // 创建一个三角形对象
     var triangle = new THREE.Triangle();
     triangle.set(p0, p1, p2);
     const center = new THREE.Vector3();
     triangle.getMidpoint(center);
 
-    // rotation
+    // 计算旋转矩阵
     const rotation = new THREE.Matrix4();
     const x = p1.clone().sub(p2).normalize();
     const y = p1.clone().sub(p0).normalize();
@@ -195,7 +199,7 @@ function calcTriangle(prediction, id0, id1, id2) {
     const z2 = new THREE.Vector3().crossVectors(x, y2).normalize();
     rotation.makeBasis(x, y2, z2);
 
-    // scale
+    // 计算缩放比例
     var scale = getScale(prediction, id1, id2);
 
     return {
@@ -205,6 +209,7 @@ function calcTriangle(prediction, id0, id1, id2) {
     };
 }
 
+// 设置场景的背景
 function setSceneBackground(frame) {
     var texture = new THREE.DataTexture(frame.data,
         frame.width,
@@ -215,21 +220,25 @@ function setSceneBackground(frame) {
     scene.background = texture;
 }
 
+// 清除场景背景
 function clearSceneBackground() {
     scene.background = null;
 }
 
+// 动画循环
 function animate() {
     requestId = canvas.requestAnimationFrame(animate);
     renderer.render(scene, camera);
 }
 
+// 停止动画
 function stopAnimate() {
     if (canvas && requestId) {
         canvas.cancelAnimationFrame(requestId);
     }
 }
 
+// 释放资源
 function dispose() {
     camera = null;
     scene = null;
@@ -242,6 +251,7 @@ function dispose() {
     canvasHeight = null;
 }
 
+// 导出相关函数和变量，以便在其他地方使用
 export {
     initThree,
     stopAnimate,
