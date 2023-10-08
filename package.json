@@ -51,6 +51,12 @@
     "@dcloudio/uni-mp-toutiao": "3.0.0-3081220230817001",
     "@dcloudio/uni-mp-weixin": "3.0.0-3081220230817001",
     "@dcloudio/uni-quickapp-webview": "3.0.0-3081220230817001",
+    "@tensorflow-models/face-landmarks-detection": "0.0.3",
+    "@tensorflow/tfjs-backend-webgl": "^4.11.0",
+    "@tensorflow/tfjs-converter": "^4.11.0",
+    "@tensorflow/tfjs-core": "^4.11.0",
+    "fetch-wechat": "^0.0.3",
+    "threejs-miniprogram": "^0.0.8",
     "vue": "^3.2.45",
     "vue-i18n": "^9.1.9"
   },
