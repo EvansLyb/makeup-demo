@@ -3,15 +3,17 @@
   <view class="page">
     <view>
       <camera
-        device-position="{{devicePosition}}"
+        id="camera"
+        device-position="front"
+        resolution="medium"
         flash="off"
-        frame-size="small"
+        frame-size="medium"
         binderror="error"
       >
         <canvas
           id="canvasWebGL"
           class="canvasWebGL"
-          type="webgl"
+          type="webgl2"
           disable-scroll="true"
         >
         </canvas>
@@ -29,27 +31,67 @@
 
 import { ref, onMounted, onUnmounted } from "vue";
 import { loadModel, detect } from "@/utils/faceBusiness";
-import {
-  initThree,
-  stopAnimate,
-  dispose,
-  setModel
-} from "@/utils/modelBusiness";
-
-import * as tf_face from "@tensorflow-models/face-landmarks-detection";
 
 const devicePosition = ref("front"); // 设备相机方向，默认为前置摄像头
 const frameSize = ref({ width: 640, height: 480 }); // 帧的尺寸
 let listener = null; // 相机监听器
 
-const modelUrl = "https://m.sanyue.red/demo/gltf/sunglass.glb"; // 3D 模型的 URL
 const cameraFrameMax = 3; // 相机帧的最大数量
-const context = uni.createCameraContext(); // 创建相机上下文对象
+const camera = uni.createCameraContext(); // 创建相机上下文对象
+const context = uni.createCanvasContext("canvasWebGL");
+
+// const drawLine = (
+//   lineArr = [],
+//   lineWidth = 2,
+//   color = "lime",
+//   isFill = false
+// ) => {
+//   try {
+//     context.beginPath();
+//     context.lineCap = "round";
+//     context.lineJoin = "round";
+//     context.strokeStyle = color;
+//     context.lineWidth = lineWidth;
+//     lineArr.forEach((e, index) => {
+//       if (index > 0) {
+//         context.lineTo(e.x, e.y);
+//       } else {
+//         context.moveTo(e.x, e.y);
+//       }
+//     });
+//     context.stroke();
+//     context.closePath();
+//     if (isFill) {
+//       context.fillStyle = "blue";
+//       context.fill();
+//     }
+//   } catch (err) {
+//     console.log(err);
+//   }
+// };
+
+const setLipsColor = keypoints => {
+  const bottom_lips = [
+    61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 292, 308, 324, 318, 402,
+    317, 14, 87, 178, 88, 95, 78, 62, 61
+  ]; //下
+  const top_lips = [
+    61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 292, 308, 415, 310, 311,
+    312, 13, 82, 81, 80, 191, 78, 62, 61
+  ]; //上
+  const color = "#000000";
+  const bottom_points = bottom_lips.map(idx => keypoints[idx]);
+  const top_points = top_lips.map(idx => keypoints[idx]);
+  // drawLine(bottom_points, 1, color, true);
+  // drawLine(top_points, 1, color, true);
+};
 
 // 启动人脸追踪
 const startTracking = async () => {
   let count = 0;
-  listener = context.onCameraFrame(async res => {
+  console.log("startTracking")
+  listener = camera.onCameraFrame(async res => {
+    console.log("count", count)
     if (count < cameraFrameMax) {
       count++;
       return;
@@ -61,39 +103,30 @@ const startTracking = async () => {
       width: res.width,
       height: res.height
     };
+    console.log("frame")
+    console.log(frame)
 
-    // const model = await tf_face.load(
-    //   tf_face.SupportedPackages.mediapipeFacemesh,
-    //   {
-    //     shouldLoadIrisModel: true
-    //   }
-    // );
-    // const predictions = await model.estimateFaces({
-    //   input: frame // 您的图像帧或视频帧
-    // });
-
-    // // 检测到的嘴唇关键点
-    // const lipKeyPoints = predictions[0].annotations.lipsUpperInner.concat(
-    //   predictions[0].annotations.lipsLowerInner
-    // );
-    
     // 使用 TensorFlow.js 进行人脸检测
     const result = await detect(frame);
+    
+    console.log("result")
+    console.log(result)
 
-    if (result && result.prediction) {
-      const canvasWidth = frame.width;
-      const canvasHeight = frame.height;
-      setModel(result.prediction, canvasWidth, canvasHeight); // 更新 3D 模型的位置、旋转和缩放
+    if (result && result.face) {
+      console.log('???')
     } else {
       const message = "No results.";
-      uni.showToast({
-        title: message,
-        icon: "none"
-      });
+      // uni.showToast({
+      //   title: message,
+      //   icon: "none"
+      // });
     }
   });
 
   listener.start();
+  setTimeout(() => {
+    listener.stop()
+  }, 6000)
 };
 
 // 停止人脸追踪
@@ -105,23 +138,23 @@ const stopTracking = () => {
 
 // 切换相机方向
 const changeDirection = () => {
-  devicePosition.value = devicePosition.value === "back" ? "front" : "back";
+  listener && listener.stop()
+  // devicePosition.value = devicePosition.value === "back" ? "front" : "back";
 };
 
 // 当组件被挂载时执行的操作
 onMounted(async () => {
-  loadModel().then(() => {
-    uni.hideLoading();
-    initThree("canvasWebGL", modelUrl); // 初始化 Three.js 场景
-    startTracking(); // 启动人脸追踪
-  });
+  await loadModel()
+  // uni.hideLoading();
+  // initThree("canvasWebGL", modelUrl); // 初始化 Three.js 场景
+  startTracking(); // 启动人脸追踪
 });
 
 // 当组件被卸载时执行的操作
 onUnmounted(() => {
   stopTracking(); // 停止人脸追踪
-  stopAnimate(); // 停止动画
-  dispose(); // 释放资源
+  // stopAnimate(); // 停止动画
+  // dispose(); // 释放资源
 });
 </script>
 
