@@ -37,8 +37,7 @@ async function detect(frame) {
     console.log('facemesh model has not been loaded.');
     return;
   }
-  var start = new Date();
-  console.log('111')
+
   try {
     // const faces = await detector.estimateFaces({
     //   input: frame,
@@ -46,12 +45,7 @@ async function detect(frame) {
     //   flipHorizontal: false
     // });
     const faces = await detector.estimateFaces(frame, {flipHorizontal: false})
-    // console.log(3332)
-    // console.log(faces)
 
-    var end = new Date() - start;
-    // console.log('detect', end, 'ms');
-  
     return { face: faces[0] };
   } catch(e) {
     console.log('error')
