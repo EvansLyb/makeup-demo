@@ -4,9 +4,9 @@
       <camera
         id="camera"
         device-position="front"
-        resolution="medium"
+        resolution="low"
         flash="off"
-        frame-size="medium"
+        frame-size="low"
         binderror="error"
       >
         <canvas
@@ -40,7 +40,10 @@ const getGl = () => {
     .exec((res) => {
       const canvas = res[0].node
       console.log('canvas', canvas)
-      gl = canvas.getContext('webgl')
+      gl = canvas.getContext('webgl', {
+        premultipliedAlpha: true,
+        alpha: true
+      })
       if (!gl) {
         console.error('webgl未受支持')
         reject()
@@ -63,8 +66,15 @@ const VShader = `
   }
 `
 const FShader = `
+  precision mediump float;
+
   void main() {
-    gl_FragColor = vec4(0.9, 0.0, 0.0, 0.64);
+    vec3 base = vec3(1.0, 0.0, 0.0);
+    vec3 blend = vec3(0.333, 0.333, 0.333);
+    float op = 0.268;
+    vec3 blendMultiply = (base * blend * op) + base * (1.0 - op);
+
+    gl_FragColor = vec4(blendMultiply, 0.5);
   }
 `
 
@@ -147,7 +157,7 @@ const draw = (vertices) => {
   gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0)
 
   // 清空画布
-  gl.clearColor(0.0, 0.0, 0.0, 0.0)
+  gl.clearColor(1.0, 1.0, 1.0, 0.0)
   gl.clear(gl.COLOR_BUFFER_BIT)
 
   // gl.drawArrays(gl.TRIANGLES, 0, 3)
